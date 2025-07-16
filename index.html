@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Happy Birthday Card</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="cake">
+      <div class="candle">
+        <div class="flame"></div>
+      </div>
+      <div class="icing"></div>
+    </div>
+    <div class="greeting">Happy Birthday Malak!</div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const body = document.body;
+      const colors = ["#ffffff", "#f8c2c9", "#d19bb3", "#e5bbd6"];
+      for (let i = 0; i < 120; i++) {
+        const conf = document.createElement("div");
+        conf.classList.add("confetti");
+        const size = Math.random() * 8 + 4;
+        conf.style.width           = size + "px";
+        conf.style.height          = size + "px";
+        conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        conf.style.left            = Math.random() * 100 + "%";
+        // نبني animation name ومدة في نفس الخاصية
+        const duration = Math.random() * 3 + 2;
+        conf.style.animation = `fall ${duration}s linear infinite`;
+        // نص دوائر نص مربعات
+        if (Math.random() < 0.5) conf.style.borderRadius = "50%";
+        body.appendChild(conf);
+      }
+    });
+  </script>
+</body>
+</html>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const flame = document.querySelector('.flame');
+  let blown = false;
+
+  // 1) نفتح المايكروفون بس
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(stream => {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source   = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const THRESHOLD = 35; // عتبة الصوت  (جرب تعديلها 20–60)
+
+      function detectBlow() {
+        analyser.getByteFrequencyData(dataArray);
+        // نحسب متوسط الطاقة في الطيف
+        let sum = dataArray.reduce((a,b) => a + b, 0);
+        let avg = sum / dataArray.length;
+        if (avg > THRESHOLD && !blown) {
+          blown = true;
+          // نطفي اللهب
+          flame.style.opacity = '0';
+          // لو عايز تحرك له أكشن تاني حط هنا
+        }
+        requestAnimationFrame(detectBlow);
+      }
+      detectBlow();
+    })
+    .catch(err => console.error("لم يتم تفعيل المايكروفون:", err));
+});
+</script>
