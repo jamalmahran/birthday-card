@@ -18,7 +18,7 @@
       </div>
       <div class="icing"></div>
     </div>
-    <div class="greeting">Happy Birthday Malak!</div>
+    <div class="greeting">Happy Birthday my Love!</div>
   </div>
 
   <script>
@@ -45,38 +45,72 @@
 </body>
 </html>
 
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const flame = document.querySelector('.flame');
-  let blown = false;
+  let blownOrShaken = false;
 
-  // 1) نفتح المايكروفون بس
-  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-    .then(stream => {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source   = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
+  // دالة تطفي اللهب
+  function extinguish() {
+    if (blownOrShaken) return;
+    blownOrShaken = true;
+    flame.style.opacity = '0';
+  }
 
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const THRESHOLD = 35; // عتبة الصوت  (جرب تعديلها 20–60)
+  // 1) (اختياري) اطلب إذن الحركة على iOS 13+
+  function enableMotion() {
+    if (
+      typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function'
+    ) {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('devicemotion', shakeHandler);
+          }
+        })
+        .catch(console.error);
+    } else {
+      // أندرويد وأوبرا وسفاري القديمة
+      window.addEventListener('devicemotion', shakeHandler);
+    }
+  }
 
-      function detectBlow() {
-        analyser.getByteFrequencyData(dataArray);
-        // نحسب متوسط الطاقة في الطيف
-        let sum = dataArray.reduce((a,b) => a + b, 0);
-        let avg = sum / dataArray.length;
-        if (avg > THRESHOLD && !blown) {
-          blown = true;
-          // نطفي اللهب
-          flame.style.opacity = '0';
-          // لو عايز تحرك له أكشن تاني حط هنا
-        }
-        requestAnimationFrame(detectBlow);
+  // 2) كاشف الهزة
+  let lastTime = new Date();
+  let lastX = null, lastY = null, lastZ = null;
+  const SHAKE_THRESHOLD = 15; // جرّب تزيد أو تقلل حسب الحساسية
+
+  function shakeHandler(event) {
+    const acc = event.accelerationIncludingGravity;
+    if (acc.x === null) return; // بعض الأجهزة لا تدعم
+
+    const currentTime = new Date();
+    const diffTime = currentTime - lastTime;
+    if (diffTime > 100) { // كل 100ms نحلّل
+      const deltaX = Math.abs(acc.x - (lastX || acc.x));
+      const deltaY = Math.abs(acc.y - (lastY || acc.y));
+      const deltaZ = Math.abs(acc.z - (lastZ || acc.z));
+
+      if (
+        (deltaX > SHAKE_THRESHOLD && deltaY > SHAKE_THRESHOLD) ||
+        (deltaX > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD) ||
+        (deltaY > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD)
+      ) {
+        extinguish();
       }
-      detectBlow();
-    })
-    .catch(err => console.error("لم يتم تفعيل المايكروفون:", err));
+
+      lastTime = currentTime;
+      lastX = acc.x;
+      lastY = acc.y;
+      lastZ = acc.z;
+    }
+  }
+
+  // 3) فعل الاستماع للحركة بعد نقرة المستخدم (ضروري لبعض المتصفحات)
+  document.body.addEventListener('click', enableMotion, { once: true });
+
+  // … هنا تبقى باقي كود الكونفيتي أو كشف الصوت لو موجود
 });
 </script>
